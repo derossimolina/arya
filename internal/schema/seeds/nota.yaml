@@ -1,0 +1,15 @@
+id: nota
+name: "Nota"
+icon: "📝"
+color: "#6C7A89"
+properties:
+  - key: tags
+    label: "Tags"
+    kind: multi_select
+    options: []
+  - key: arquivada
+    label: "Arquivada"
+    kind: checkbox
+    default: false
+template: |
+  # {{title}}

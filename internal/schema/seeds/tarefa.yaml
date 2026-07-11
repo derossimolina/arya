@@ -1,0 +1,21 @@
+id: tarefa
+name: "Tarefa"
+icon: "✅"
+color: "#4A90D9"
+properties:
+  - key: status
+    label: "Status"
+    kind: select
+    required: true
+    options: ["pendente", "em andamento", "concluída"]
+    default: "pendente"
+  - key: prazo
+    label: "Prazo"
+    kind: date
+  - key: prioridade
+    label: "Prioridade"
+    kind: select
+    options: ["baixa", "média", "alta"]
+    default: "média"
+template: |
+  # {{title}}

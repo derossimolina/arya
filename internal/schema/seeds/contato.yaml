@@ -1,0 +1,14 @@
+id: contato
+name: "Contato"
+icon: "📇"
+color: "#E67E22"
+extends: pessoa
+properties:
+  - key: empresa
+    label: "Empresa"
+    kind: text
+  - key: cargo
+    label: "Cargo"
+    kind: text
+template: |
+  # {{title}}

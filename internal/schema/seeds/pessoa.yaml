@@ -1,0 +1,16 @@
+id: pessoa
+name: "Pessoa"
+icon: "👤"
+color: "#9B59B6"
+properties:
+  - key: email
+    label: "E-mail"
+    kind: text
+  - key: telefone
+    label: "Telefone"
+    kind: text
+  - key: aniversario
+    label: "Aniversário"
+    kind: date
+template: |
+  # {{title}}
