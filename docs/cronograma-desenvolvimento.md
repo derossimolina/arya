@@ -17,7 +17,7 @@ grátis, sem servidor), e depois em duas etapas de monetização. Datas não est
 
 | Etapa | Status |
 |---|---|
-| Etapa 1 — MVP core | 🟡 Em andamento (2 de 6 fatias concluídas) |
+| Etapa 1 — MVP core | 🟡 Em andamento (3 de 6 fatias concluídas) |
 | Etapa 2 — Monetização (Hugo + sync mobile) | ⚪ Não iniciada |
 | Etapa 3+ — Marketplace/plugins/temas | ⚪ Não iniciada (backlog, sem escopo definido) |
 
@@ -29,7 +29,7 @@ grátis, sem servidor), e depois em duas etapas de monetização. Datas não est
 |---|---|---|---|
 | 1 | Arquivos + árvore de cadernos | ✅ Concluída | — |
 | 2 | Sistema de tipos/schemas | ✅ Concluída | Fatia 1 |
-| 3 | Índice SQLite + views (tabela/kanban) | ⬜ A fazer | Fatia 2 |
+| 3 | Índice SQLite + views (tabela/kanban) | ✅ Concluída | Fatia 2 |
 | 4 | Modo outline/tasks (estilo Logseq) | ⬜ A fazer | Fatia 1 |
 | 5 | Grafo de wikilinks + backlinks | ⬜ A fazer | Fatia 3 |
 | 6 | Sync via git puro | ⬜ A fazer | Fatia 1 |
@@ -46,11 +46,13 @@ seleção única/múltipla, checkbox, relação, arquivo, URL), formulário de c
 criação de tipo a partir do frontmatter de uma nota existente, e alternância visual/YAML na edição
 de propriedades (estilo Obsidian).
 
-### ⬜ Fatia 3 — Índice SQLite + views
-Índice local reconstruível (nunca fonte da verdade) sobre os arquivos do vault, permitindo
-consultas como "todas as notas do tipo X". Views de tabela e kanban declaradas no schema (já
-parseadas hoje, sem UI) passam a ser navegáveis. Base necessária para um picker de "relação" de
-verdade (hoje é só um campo de texto manual).
+### ✅ Fatia 3 — Índice SQLite + views
+**Entregue.** Índice reconstruído inteiro em memória (`modernc.org/sqlite`, `:memory:`) a cada
+consulta — nunca persistido, sempre um espelho fiel do vault no disco. `IndexService.QueryByType`
+varre o vault e retorna os objetos de um tipo com suas properties. Views de tabela e kanban agora
+têm um editor no `SchemaEditorPanel` e um `ViewRenderer` navegável (tabela ou kanban, clique abre
+a nota). Picker de "relação" de verdade sobre este índice fica para uma fatia futura — por ora
+`RelationField` continua um campo de texto manual.
 
 ### ⬜ Fatia 4 — Modo outline/tasks
 Segunda visualização do mesmo arquivo em modo bullet/outline (estilo Logseq), com tasks

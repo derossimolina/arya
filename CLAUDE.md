@@ -185,7 +185,8 @@ sequenciais e validadas (ver "Estado atual da implementação" abaixo para o que
 1. ✅ **Concluído** — Leitura/escrita de `.md` + goldmark/frontmatter + árvore de pastas (cadernos)
 2. ✅ **Concluído** — Sistema de tipos: parser genérico de schemas YAML + editor de propriedades
    gerado dinamicamente a partir do schema (sem structs fixas por tipo)
-3. ⏳ Pendente — Índice: modernc.org/sqlite com o schema EAV + views de tabela/kanban sobre um tipo
+3. ✅ **Concluído** — Índice: modernc.org/sqlite (reconstruído em memória sob demanda) + views de
+   tabela/kanban sobre um tipo
 4. ⏳ Pendente — Modo bloco/outline (estilo Logseq) + parsing de tasks (`- [ ]` / `- [x]`) sobre a
    AST do goldmark
 5. ⏳ Pendente — Grafo: wikilinks (`[[nota]]`) + backlinks + visualização de grafo
@@ -237,7 +238,7 @@ terceiros usando o `KindRegistry` como ponto de extensão, temas visuais.
 Não empacotar Hugo e sync na mesma cobrança — evita subsidiar custo de servidor com receita de
 um recurso que não gera custo nenhum, e permite ao usuário pagar só pelo que usa.
 
-## Estado atual da implementação (fatias 1 e 2 de Etapa 1 concluídas)
+## Estado atual da implementação (fatias 1-3 de Etapa 1 concluídas)
 
 O código já vai bem além do scaffold padrão do Wails. Resumo do que existe hoje — antes de
 assumir uma assinatura ou arquivo, confira o código real, este texto é um resumo e pode ficar
@@ -263,6 +264,9 @@ entre chamadas — mesmo padrão em todos):
   `CreateNote(parentPath, title, typeID)`.
 - `SchemaService`: `ListSchemas`, `GetSchema`, `ResolveSchema`, `SaveSchema`, `DeleteSchema`,
   `ListKinds`.
+- `IndexService`: `QueryByType(typeID)` — reconstrói um índice SQLite `:memory:` a partir do
+  vault a cada chamada (nunca persiste em disco; ver `internal/index`) e retorna os objetos
+  daquele tipo com suas properties.
 
 **Frontend (`frontend/src/`)**
 - First-run (escolher vault) → `MainLayout` (árvore de cadernos + editor).
@@ -272,18 +276,22 @@ entre chamadas — mesmo padrão em todos):
   usado quando `type` resolve a um schema válido. Toggle "Ver YAML"/"Ver formulário".
 - Se `type` não corresponde a nenhum schema existente, botão "Criar tipo agora" com formulário
   pré-preenchido a partir do frontmatter da nota.
-- `SchemaManagerModal`/`SchemaEditorPanel` — CRUD de tipos pela UI ("+ Novo Tipo").
+- `SchemaManagerModal`/`SchemaEditorPanel` — CRUD de tipos pela UI ("+ Novo Tipo"), incluindo
+  agora um editor de `views[]` (nome/tipo/group_by/columns) por schema.
+- `Views/ViewRenderer` — renderiza uma view salva de um schema como tabela ou kanban, consultando
+  `IndexService.QueryByType`; acessível pelos botões "Ver: <nome>" no `SchemaManagerModal`.
 
-**Ainda não implementado** (fatias 3-6 da Etapa 1): índice SQLite, views de tabela/kanban (o
-`View` do schema já é parseado/persistido, mas sem UI nenhuma), modo outline/tasks, grafo de
-wikilinks/backlinks, sync git.
+**Ainda não implementado** (fatias 4-6 da Etapa 1): modo outline/tasks, grafo de
+wikilinks/backlinks, sync git. `RelationField`/`FileField` continuam placeholders de texto —
+um picker real sobre o índice fica para quando essas fatias tocarem relações entre notas.
 
-Dependências já adicionadas: `goldmark`, `goldmark-meta`, `gopkg.in/yaml.v3` (Go);
-`@uiw/react-codemirror` + `@codemirror/{state,view,lang-markdown,lang-yaml,commands,theme-one-dark}`
+Dependências já adicionadas: `goldmark`, `goldmark-meta`, `gopkg.in/yaml.v3`, `modernc.org/sqlite`
+(Go); `@uiw/react-codemirror` + `@codemirror/{state,view,lang-markdown,lang-yaml,commands,theme-one-dark}`
 (frontend). **Ainda não adicionadas** (stack-alvo de fatias futuras, não assumir presentes):
-`modernc.org/sqlite`, `fsnotify`, `BlockNote`/`TipTap`.
+`fsnotify`, `BlockNote`/`TipTap`.
 
-Há suíte de testes Go de verdade (`go test ./...`, cobrindo `internal/vault` e `internal/schema`)
+Há suíte de testes Go de verdade (`go test ./...`, cobrindo `internal/vault`, `internal/schema` e
+`internal/index`)
 — a frase antiga "nenhum teste configurado" só vale pro frontend, que segue sem test runner.
 
 ## Comandos
