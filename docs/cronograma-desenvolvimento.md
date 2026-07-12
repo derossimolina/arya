@@ -17,9 +17,13 @@ grátis, sem servidor), e depois em duas etapas de monetização. Datas não est
 
 | Etapa | Status |
 |---|---|
-| Etapa 1 — MVP core | 🟡 Em andamento (3 de 6 fatias concluídas) |
+| Etapa 1 — MVP core | 🟡 Em andamento (3 de 6 fatias concluídas, 2 parciais — 4 e 5) |
 | Etapa 2 — Monetização (Hugo + sync mobile) | ⚪ Não iniciada |
 | Etapa 3+ — Marketplace/plugins/temas | ⚪ Não iniciada (backlog, sem escopo definido) |
+
+Além das fatias, duas frentes novas (fora da numeração original) foram entregues nesta sessão:
+**busca global** (full-text, FTS5) e uma **reforma visual completa** do app (ver seção própria
+abaixo).
 
 ---
 
@@ -30,8 +34,8 @@ grátis, sem servidor), e depois em duas etapas de monetização. Datas não est
 | 1 | Arquivos + árvore de cadernos | ✅ Concluída | — |
 | 2 | Sistema de tipos/schemas | ✅ Concluída | Fatia 1 |
 | 3 | Índice SQLite + views (tabela/kanban) | ✅ Concluída | Fatia 2 |
-| 4 | Modo outline/tasks (estilo Logseq) | ⬜ A fazer | Fatia 1 |
-| 5 | Grafo de wikilinks + backlinks | ⬜ A fazer | Fatia 3 |
+| 4 | Modo bloco (estilo Notion) + tasks | 🟡 Parcial | Fatia 1 |
+| 5 | Wikilinks + backlinks + grafo | 🟡 Parcial | Fatia 3 |
 | 6 | Sync via git puro | ⬜ A fazer | Fatia 1 |
 
 ### ✅ Fatia 1 — Arquivos + árvore de cadernos
@@ -54,17 +58,48 @@ têm um editor no `SchemaEditorPanel` e um `ViewRenderer` navegável (tabela ou 
 a nota). Picker de "relação" de verdade sobre este índice fica para uma fatia futura — por ora
 `RelationField` continua um campo de texto manual.
 
-### ⬜ Fatia 4 — Modo outline/tasks
-Segunda visualização do mesmo arquivo em modo bullet/outline (estilo Logseq), com tasks
-(`- [ ]` / `- [x]`) extraídas e navegáveis a partir da AST do markdown.
+### 🟡 Fatia 4 — Modo bloco + tasks
+**Parcial.** Segunda visualização do mesmo arquivo virou um editor de blocos de verdade
+(BlockNote, não outline bullet — decisão mudou de rumo em relação ao esboço original de "estilo
+Logseq"), com menu "/" estilo Notion. Entregue: tabela (nativa do BlockNote) e "Criar página"
+(cria nota nova e insere link). **Falta:** blocos de kanban/cronograma embutindo uma `view`
+salva do schema, bloco de tarefa inline com `kind: datetime`, e o parsing de tasks (`- [ ]`/
+`- [x]`) sobre a AST do goldmark para um índice de tasks vault-wide.
 
-### ⬜ Fatia 5 — Grafo de wikilinks
-Sintaxe `[[nota]]` para linkar notas, backlinks automáticos, visualização de grafo. Depende do
-índice (Fatia 3) para consultas eficientes de backlinks.
+### 🟡 Fatia 5 — Wikilinks + backlinks
+**Parcial.** Sintaxe `[[título]]` funcionando de verdade: autocomplete ao digitar `[[`, link
+clicável em qualquer lugar do texto (não só numa linha isolada), resolve via
+`IndexService.ResolveNoteTitle` e sobrevive a salvar/reabrir a nota. **Mas só em nível de
+nota** — a opção que tinha sido escolhida antes para esta fatia (referência/transclusão em nível
+de **bloco**, estilo Logseq, com IDs de bloco e índice de backlinks) não foi implementada.
+Backlinks e visualização de grafo continuam pendentes.
 
 ### ⬜ Fatia 6 — Sync via git
 Sync opcional via git puro — o usuário gerencia o próprio repositório remoto, sem infraestrutura
 nossa. Menor risco técnico das fatias restantes.
+
+---
+
+## Busca global + reforma visual (net-new, fora da numeração de fatias)
+
+Entregue nesta sessão, junto com o trabalho de Fatia 4/5 acima:
+
+- **Busca global**: índice FTS5 (`internal/index/search.go`, tokenizer `trigram`) cobrindo toda
+  nota do vault, tipada ou não — o problema original era que não existia NENHUM jeito de buscar
+  no app (só dava pra navegar por `Tipos → Ver: <view>`, que exige já saber o tipo). Acessível
+  via `Ctrl+K` ou botão "Buscar notas…" na sidebar (`CommandPalette.tsx`).
+- **Reforma visual**, em duas iterações:
+  1. Um design system próprio (paleta escura/violeta, inventada) — a primeira tentativa.
+  2. Substituída pelo **"Sheepdog Design System"**, importado de um projeto real do Claude
+     Design (`DesignSync`, projectId `b7d16433-df8f-40fe-b5d3-250361750b1c`): paleta monocromática
+     de cinza quente, tipografia serifada, raios quase retos — só que isso sozinho ainda pareceu
+     "cru"/"infantil" pro usuário, então por cima entrou uma camada de layout **inspirada no
+     Notion** (título grande e editável, coluna de conteúdo centralizada, sidebar sem bordas
+     pesadas, ícones SVG outline no lugar de emoji — o design system importado proíbe emoji
+     explicitamente).
+- Efeito colateral: o body editor de toda nota (tipada ou não) trocou de CodeMirror puro para um
+  editor de blocos (BlockNote) com menu "/", o que efetivamente puxou boa parte da Fatia 4 para
+  frente (ver acima).
 
 ---
 
@@ -86,12 +121,31 @@ diferentes, cobradas separadamente:
 - Protocolo de sync inicial: last-write-wins por arquivo, com timestamp (CRDT só se conflitos
   concorrentes virarem problema real).
 
+### 2c. Agente de IA plugável (backlog levantado 2026-07-12, ainda sem desenho técnico)
+- Ideia: um serviço que aceita uma API key de um provedor à escolha do usuário (Claude Code,
+  Cursor, OpenAI, ou modelos abertos estilo Hermes) e usa esse agente para capturar, escrever e
+  salvar notas dentro do vault — presumivelmente reaproveitando `NotesService.CreateNote`/
+  `SaveNoteStructured` como o ponto de entrada no disco, já que essas são as únicas operações de
+  escrita que preservam as garantias do vault (slug seguro, guarda contra path traversal, etc.).
+  Depende de decidir: onde a chave de API fica armazenada (nunca no arquivo `.md`), se roda
+  local via CLI de terceiros ou via chamada HTTP direta ao provedor, e qual o gatilho (comando
+  manual do usuário vs. algo automático). Nenhuma dessas perguntas foi respondida ainda — é só
+  uma intenção registrada para não se perder, não um desenho pronto para implementar.
+
 ---
 
 ## Etapa 3+ (backlog, sem escopo definido)
 
 Candidatos: marketplace de tipos/templates compartilháveis pela comunidade, plugins de terceiros
 sobre o `KindRegistry`, temas visuais.
+
+**Banco de dados estilo Notion (levantado 2026-07-12):** múltiplas visualizações de uma mesma
+coleção de notas (inline dentro de uma página e/ou página inteira dedicada), à la Notion database.
+Arya já tem um pedaço disso — schemas tipados com `views[]` (tabela/kanban, e cronograma a partir
+da Fatia 4) — mas um "banco de dados" completo à la Notion também implica filtros/ordenação ad hoc
+pela UI (não só a view salva no schema) e, possivelmente, embutir a view dentro do corpo de outra
+nota como um bloco (o que já teria uma base pronta nos blocos `arya-view` da Fatia 4). Fica
+explicitamente para a Etapa 3 — não tem desenho técnico ainda, só a intenção registrada.
 
 ---
 

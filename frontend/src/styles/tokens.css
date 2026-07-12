@@ -1,0 +1,155 @@
+/* Design tokens, imported from the "Sheepdog Design System" Claude Design
+   project (b7d16433-df8f-40fe-b5d3-250361750b1c): monochromatic warm-gray
+   palette, serif editorial typography, near-flat radii, warm low-spread
+   shadows. No chromatic accent — authority comes from scale/contrast alone;
+   color is reserved for status (compliant/warning/critical), never
+   decoration. This file mirrors that project's tokens/*.css verbatim in the
+   first section; the second section aliases them to the semantic names the
+   rest of this app's CSS already uses, so components didn't need rewriting
+   to re-theme.
+
+   Font note: the source design system @imports Playfair Display/Lora/
+   JetBrains Mono from Google Fonts. Arya is offline-first (see CLAUDE.md) —
+   pulling from a CDN would silently break that on first run without
+   network access. Font-family values below keep those names first (so
+   dropping matching .woff2 files into assets/fonts/ + a @font-face block
+   later needs no CSS change) but fall back to Georgia/Consolas, both
+   preinstalled on Windows, until real font files are added locally. */
+
+:root {
+    /* ── Sheepdog: gray scale (warm undertone) ────────────────────────── */
+    --gray-50: #faf9f7;
+    --gray-100: #f0ede6;
+    --gray-200: #e2ddd4;
+    --gray-300: #cbc6bb;
+    --gray-400: #a8a39a;
+    --gray-500: #857f76;
+    --gray-600: #605c54;
+    --gray-700: #413e39;
+    --gray-800: #2a2825;
+    --gray-900: #141210;
+    --gray-950: #0a0908;
+
+    /* ── Sheepdog: surface ─────────────────────────────────────────────── */
+    --color-bg: var(--gray-50);
+    --color-bg-subtle: var(--gray-100);
+    --color-bg-muted: var(--gray-200);
+    --color-surface: #ffffff;
+    --color-surface-overlay: rgba(250, 249, 247, 0.92);
+
+    /* ── Sheepdog: foreground ──────────────────────────────────────────── */
+    --color-fg: var(--gray-950);
+    --color-fg-subtle: var(--gray-700);
+    --color-fg-muted: var(--gray-500);
+    --color-fg-placeholder: var(--gray-400);
+    --color-fg-inverse: var(--gray-50);
+
+    /* ── Sheepdog: border ──────────────────────────────────────────────── */
+    --color-border: var(--gray-200);
+    --color-border-strong: var(--gray-400);
+    --color-border-subtle: var(--gray-100);
+
+    /* ── Sheepdog: status (the only chromatic values — data, not decor) ── */
+    --color-compliant: #2d6a4f;
+    --color-compliant-bg: #e8f4ef;
+    --color-compliant-border: #a3ccb8;
+    --color-warning: #7a5c00;
+    --color-warning-bg: #fdf3d0;
+    --color-warning-border: #d4b04a;
+    --color-critical: #8b1e1e;
+    --color-critical-bg: #fde8e8;
+    --color-critical-border: #cc7777;
+    --color-info: var(--gray-600);
+    --color-info-bg: var(--gray-100);
+    --color-info-border: var(--gray-300);
+
+    /* ── Sheepdog: typography ──────────────────────────────────────────── */
+    --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    --font-body: 'Lora', Georgia, 'Times New Roman', serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+
+    --text-2xs: 0.625rem;
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+    --text-3xl: 1.875rem;
+    --text-4xl: 2.25rem;
+
+    --leading-tight: 1.2;
+    --leading-normal: 1.55;
+    --leading-relaxed: 1.7;
+
+    --tracking-tight: -0.015em;
+    --tracking-wide: 0.04em;
+    --tracking-wider: 0.08em;
+
+    --weight-regular: 400;
+    --weight-medium: 500;
+    --weight-semibold: 600;
+    --weight-bold: 700;
+
+    /* ── Sheepdog: spacing (4px base unit) ─────────────────────────────── */
+    --space-1: 4px;
+    --space-1-5: 6px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+
+    /* ── Sheepdog: effects ─────────────────────────────────────────────── */
+    --radius-xs: 2px;
+    --radius-sm: 3px;
+    --radius-md: 4px;
+    --radius-lg: 6px;
+    --radius-full: 9999px;
+
+    --shadow-xs: 0 1px 2px rgba(10, 9, 8, 0.05);
+    --shadow-sm: 0 1px 3px rgba(10, 9, 8, 0.08), 0 1px 2px rgba(10, 9, 8, 0.04);
+    --shadow-md: 0 4px 8px rgba(10, 9, 8, 0.08), 0 2px 4px rgba(10, 9, 8, 0.04);
+    --shadow-lg: 0 8px 24px rgba(10, 9, 8, 0.1), 0 4px 8px rgba(10, 9, 8, 0.05);
+    --shadow-focus: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-fg);
+
+    --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+    --duration-fast: 100ms;
+    --duration-base: 180ms;
+    --transition-fast: var(--duration-fast) var(--ease-in-out);
+    --transition-base: var(--duration-base) var(--ease-in-out);
+
+    /* ── Arya semantic aliases (used throughout style.css/App.css) ────── */
+    --bg-canvas: var(--color-bg);
+    --bg-surface: var(--color-surface);
+    --bg-elevated: var(--color-surface);
+    --bg-hover: var(--color-bg-subtle);
+    --bg-active: var(--color-bg-muted);
+
+    --text-primary: var(--color-fg);
+    --text-muted: var(--color-fg-muted);
+    --text-faint: var(--color-fg-placeholder);
+
+    --border-subtle: var(--color-border-subtle);
+    --border-strong: var(--color-border-strong);
+
+    /* Monochrome brand: "accent" is near-black, not a hue — selection/focus
+       read through weight and contrast, same as the rest of the palette. */
+    --accent: var(--color-fg);
+    --accent-hover: var(--gray-800);
+    --accent-muted: var(--color-bg-subtle);
+    --accent-text: var(--color-fg);
+
+    --color-danger: var(--color-critical);
+    --color-success: var(--color-compliant);
+    --highlight-bg: var(--color-warning-bg);
+
+    --font-size-xs: var(--text-xs);
+    --font-size-sm: var(--text-sm);
+    --font-size-md: var(--text-base);
+    --font-size-lg: var(--text-lg);
+    --font-size-xl: var(--text-xl);
+
+    --shadow-elevated: var(--shadow-lg);
+}

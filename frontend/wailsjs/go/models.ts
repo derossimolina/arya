@@ -18,6 +18,22 @@ export namespace index {
 	        this.properties = source["properties"];
 	    }
 	}
+	export class SearchResult {
+	    path: string;
+	    title: string;
+	    snippet: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SearchResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.title = source["title"];
+	        this.snippet = source["snippet"];
+	    }
+	}
 
 }
 

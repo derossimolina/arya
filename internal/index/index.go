@@ -68,7 +68,10 @@ func BuildFromVault(v *vault.Vault, validTypes map[string]bool) (*Index, error) 
 		return nil, err
 	}
 
-	if err := idx.indexNode(v, root, validTypes); err != nil {
+	err = WalkNotes(v, root, func(path string, note vault.Note) error {
+		return idx.indexNote(path, note, validTypes)
+	})
+	if err != nil {
 		idx.Close()
 		return nil, err
 	}
@@ -76,23 +79,29 @@ func BuildFromVault(v *vault.Vault, validTypes map[string]bool) (*Index, error) 
 	return idx, nil
 }
 
-func (idx *Index) indexNode(v *vault.Vault, node vault.Node, validTypes map[string]bool) error {
-	if node.Type == vault.NodeNote {
-		return idx.indexNote(v, node.Path, validTypes)
+// WalkNotes visits every note reachable from root (recursing into folders),
+// reading each one and invoking fn with its path and parsed content. It is
+// shared by every package that needs to scan a whole vault once per call
+// (this package's type index, the full-text search index, and later the
+// tasks/blocks indexes) instead of each re-implementing the same tree
+// recursion + ReadNote calls.
+func WalkNotes(v *vault.Vault, root vault.Node, fn func(path string, note vault.Note) error) error {
+	if root.Type == vault.NodeNote {
+		note, err := v.ReadNote(root.Path)
+		if err != nil {
+			return err
+		}
+		return fn(root.Path, note)
 	}
-	for _, child := range node.Children {
-		if err := idx.indexNode(v, child, validTypes); err != nil {
+	for _, child := range root.Children {
+		if err := WalkNotes(v, child, fn); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (idx *Index) indexNote(v *vault.Vault, path string, validTypes map[string]bool) error {
-	note, err := v.ReadNote(path)
-	if err != nil {
-		return err
-	}
+func (idx *Index) indexNote(path string, note vault.Note, validTypes map[string]bool) error {
 	if note.FrontmatterError != "" {
 		return nil
 	}

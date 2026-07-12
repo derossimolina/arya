@@ -5,3 +5,7 @@
 export function QueryByType(arg1) {
   return window['go']['main']['IndexService']['QueryByType'](arg1);
 }
+
+export function ResolveNoteTitle(arg1) {
+  return window['go']['main']['IndexService']['ResolveNoteTitle'](arg1);
+}

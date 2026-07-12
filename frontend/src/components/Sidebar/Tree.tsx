@@ -1,4 +1,5 @@
 import { vault } from '../../../wailsjs/go/models';
+import { FolderIcon, NoteIcon } from '../icons/Icons';
 
 interface TreeProps {
     nodes: vault.Node[];
@@ -37,7 +38,9 @@ function Tree({
                                 }}
                             >
                                 <span className="tree-caret">{isExpanded ? '▾' : '▸'}</span>
-                                <span className="tree-icon">📁</span>
+                                <span className="tree-icon">
+                                    <FolderIcon />
+                                </span>
                                 <span className="tree-name">{node.name}</span>
                             </div>
                             {isExpanded && node.children && node.children.length > 0 && (
@@ -63,7 +66,9 @@ function Tree({
                             className={`tree-row note${isActive ? ' active' : ''}`}
                             onClick={() => onOpenNote(node.path)}
                         >
-                            <span className="tree-icon">📝</span>
+                            <span className="tree-icon">
+                                <NoteIcon />
+                            </span>
                             <span className="tree-name">{node.name.replace(/\.md$/i, '')}</span>
                         </div>
                     </li>

@@ -24,7 +24,7 @@ tipos (schemas) NÃO pode ser hardcoded no código — precisa ser inteiramente 
 | Shell da app | **Wails v2** (não v3, ainda alpha) | Equivalente ao Tauri, mas com backend em Go em vez de Rust — usuário já domina Go |
 | Frontend | **React + TypeScript** | Bindings Go→TS automáticos gerados pelo Wails |
 | Editor de texto longo | **CodeMirror 6** | Mesmo editor usado pelo Obsidian em modo source |
-| Editor de blocos (modo Logseq) | avaliar **BlockNote** ou **TipTap** | Segunda visualização do mesmo arquivo como outline |
+| Editor de blocos (modo Logseq) | **BlockNote** (decidido, não TipTap) | Único editor com menu "/" e drag handles prontos; TipTap exigiria construir isso do zero |
 | Parsing markdown | **yuin/goldmark** (+ `yuin/goldmark-meta` para frontmatter) | Parser usado pelo Hugo desde 0.60; CommonMark compliant, AST extensível |
 | Frontmatter/YAML | `gopkg.in/yaml.v3` | Parse do YAML de propriedades e de schemas de tipo |
 | Índice/queries | **modernc.org/sqlite** | Pure-Go, sem CGO — evita exigir compilador C no ambiente Windows do usuário |
@@ -167,10 +167,12 @@ renderização a partir do `kind` de cada propriedade:
 Isso é o que permite que qualquer tipo criado pelo usuário — sem nenhum tipo "especial" — ganhe
 uma UI de edição funcional automaticamente. Implementado em
 `frontend/src/components/Properties/PropertyField.tsx` (um widget por `kind`); notas tipadas
-também têm um toggle "Ver YAML"/"Ver formulário" que troca entre esses widgets e o bloco de
-frontmatter como texto puro (estilo Obsidian), e uma nota cujo `type` no frontmatter ainda não
-tem schema oferece "Criar tipo agora", pré-preenchendo o formulário com propriedades inferidas
-dos valores já presentes no frontmatter.
+têm um único toggle "Ver Markdown" que troca entre o formulário de propriedades + editor de
+blocos e o arquivo inteiro (frontmatter + corpo juntos) como texto puro (estilo Obsidian source
+mode) — não existe mais um modo "só YAML" separado, foi unificado a pedido do usuário porque a
+divisão em dois toggles independentes (form/YAML × blocos/markdown) confundia mais do que ajudava.
+Uma nota cujo `type` no frontmatter ainda não tem schema oferece "Criar tipo agora",
+pré-preenchendo o formulário com propriedades inferidas dos valores já presentes no frontmatter.
 
 ## Etapas de lançamento (releases, não só fases de dev interno)
 
@@ -187,14 +189,24 @@ sequenciais e validadas (ver "Estado atual da implementação" abaixo para o que
    gerado dinamicamente a partir do schema (sem structs fixas por tipo)
 3. ✅ **Concluído** — Índice: modernc.org/sqlite (reconstruído em memória sob demanda) + views de
    tabela/kanban sobre um tipo
-4. ⏳ Pendente — Modo bloco/outline (estilo Logseq) + parsing de tasks (`- [ ]` / `- [x]`) sobre a
-   AST do goldmark
-5. ⏳ Pendente — Grafo: wikilinks (`[[nota]]`) + backlinks + visualização de grafo
+4. 🟡 **Parcial** — Modo bloco (estilo Notion, via BlockNote) com menu "/" entregue (tabela nativa,
+   criação de página); ainda faltam os blocos de kanban/cronograma embutindo uma view salva do
+   schema, o bloco de tarefa inline com `kind: datetime`, e o parsing de tasks (`- [ ]`/`- [x]`)
+   sobre a AST do goldmark para um índice de tasks vault-wide
+5. 🟡 **Parcial** — Wikilinks **em nível de nota** funcionando (`[[título]]`, autocomplete ao
+   digitar `[[`, resolve e navega para a nota via `IndexService.ResolveNoteTitle`); a opção
+   "funda" que tinha sido escolhida para esta fatia — referência/transclusão em **nível de
+   bloco** (estilo Logseq, com IDs de bloco e índice de backlinks) — **não foi implementada**,
+   ficou só o nível de nota mesmo. Backlinks e visualização de grafo também continuam pendentes
 6. ⏳ Pendente — Sync opcional via git puro (usuário gerencia sozinho, sem infra nossa)
 
 Cada item deve ser entregue com testes, priorizando parsing e I/O de arquivos como área de maior
 risco de bugs sutis (encoding, YAML malformado, edge cases de wikilinks). Esta etapa é a "isca"
 que valida a proposta de valor antes de investir em infraestrutura paga.
+
+Além das fatias acima (que já existiam antes desta rodada), duas frentes novas foram entregues
+que não faziam parte da numeração original: **busca global** (full-text, via FTS5) e uma
+**reforma visual completa** (ver "Estado atual da implementação" abaixo para os dois).
 
 ### Etapa 2 — primeira camada monetizável
 
@@ -222,10 +234,20 @@ Duas features com perfis de custo diferentes → **dois produtos, dois modelos d
   - Autenticação: token de assinatura ativa validado pelo backend a cada sync (diferente da
     licença offline do Hugo — aqui precisa ser online, pois o modelo é recorrente).
 
+**2c. Agente de IA plugável (backlog levantado 2026-07-12, sem desenho técnico ainda)** — usuário
+pluga uma API key de um provedor à escolha (Claude Code, Cursor, OpenAI, modelos abertos estilo
+Hermes) e o agente captura/escreve/salva notas dentro do vault, presumivelmente sobre
+`NotesService.CreateNote`/`SaveNoteStructured`. Sem decisão ainda sobre onde a key fica
+armazenada, se roda local via CLI de terceiros ou HTTP direto ao provedor, nem qual o gatilho.
+Só a intenção registrada — ver `docs/cronograma-desenvolvimento.md` para o mesmo texto.
+
 ### Etapa 3+ (não detalhado ainda)
 
 Candidatos naturais: marketplace de tipos/templates compartilháveis pela comunidade, plugins de
-terceiros usando o `KindRegistry` como ponto de extensão, temas visuais.
+terceiros usando o `KindRegistry` como ponto de extensão, temas visuais, e um **banco de dados
+estilo Notion** (múltiplas visualizações — inline num bloco de outra nota e/ou página inteira —
+sobre a mesma coleção, com filtro/ordenação ad hoc pela UI, não só a view fixa salva no schema;
+backlog levantado 2026-07-12, sem desenho técnico).
 
 ## Modelo de monetização (resumo)
 
@@ -238,7 +260,7 @@ terceiros usando o `KindRegistry` como ponto de extensão, temas visuais.
 Não empacotar Hugo e sync na mesma cobrança — evita subsidiar custo de servidor com receita de
 um recurso que não gera custo nenhum, e permite ao usuário pagar só pelo que usa.
 
-## Estado atual da implementação (fatias 1-3 de Etapa 1 concluídas)
+## Estado atual da implementação (fatias 1-3 concluídas, 4-5 parciais, busca+visual novos)
 
 O código já vai bem além do scaffold padrão do Wails. Resumo do que existe hoje — antes de
 assumir uma assinatura ou arquivo, confira o código real, este texto é um resumo e pode ficar
@@ -256,6 +278,10 @@ desatualizado:
   parse/serialize de schema via `yaml.v3`, merge de `extends` (com detecção de ciclo), `Manager`
   sobre `<vault>/_schemas/` (list/get/resolve/save/delete + seed automático dos 4 tipos de
   exemplo na primeira vez que a pasta não existe).
+- `internal/index` — `BuildFromVault` (índice SQLite `:memory:` de notas tipadas, cache
+  reconstruído por chamada) + `WalkNotes` (helper de varredura compartilhado) +
+  `BuildSearchIndex`/`Search` (`search.go`, índice FTS5 com tokenizer `trigram` cobrindo **toda**
+  nota, tipada ou não — confirmado disponível em `modernc.org/sqlite@v1.53.0` mesmo sem CGO).
 
 **Serviços Wails bindados** (`main` package, recarregam config/vault a cada chamada, sem cache
 entre chamadas — mesmo padrão em todos):
@@ -264,35 +290,73 @@ entre chamadas — mesmo padrão em todos):
   `CreateNote(parentPath, title, typeID)`.
 - `SchemaService`: `ListSchemas`, `GetSchema`, `ResolveSchema`, `SaveSchema`, `DeleteSchema`,
   `ListKinds`.
-- `IndexService`: `QueryByType(typeID)` — reconstrói um índice SQLite `:memory:` a partir do
-  vault a cada chamada (nunca persiste em disco; ver `internal/index`) e retorna os objetos
-  daquele tipo com suas properties.
+- `IndexService`: `QueryByType(typeID)`; `ResolveNoteTitle(title)` — varre o vault procurando uma
+  nota cujo frontmatter `title` bata (case-insensitive), usado para resolver `[[título]]` de
+  volta a um link clicável quando uma nota é carregada no editor de blocos.
+- `SearchService`: `Search(query)` — busca full-text (FTS5) em título+corpo de toda nota.
 
 **Frontend (`frontend/src/`)**
-- First-run (escolher vault) → `MainLayout` (árvore de cadernos + editor).
-- `NoteEditor` — CodeMirror 6 raw (arquivo inteiro, frontmatter+corpo juntos); usado quando a
-  nota não tem `type` no frontmatter.
-- `TypedNoteView` — painel de propriedades gerado por schema + corpo em CodeMirror separado;
-  usado quando `type` resolve a um schema válido. Toggle "Ver YAML"/"Ver formulário".
+- First-run (escolher vault) → `MainLayout` (árvore de cadernos + editor), agora com sidebar
+  recolhível (`sidebar-rail` + ícone de colapsar) e busca global em destaque (`Ctrl+K` ou botão
+  "Buscar notas…") via `Search/CommandPalette.tsx`.
+- **Editor de blocos (BlockNote)** — `Editor/BlockEditor.tsx` substitui o corpo em CodeMirror por
+  um editor de blocos estilo Notion com menu "/" (`SuggestionMenuController`). Blocos nativos
+  (tabela, heading, lista) saem de graça do BlockNote; bloco customizado `pageLink`
+  (`Editor/blocks/pageLinkBlock.tsx`) cobre "/Criar página" (chama `CreateNote` de verdade e
+  avisa `MainLayout` para recarregar a árvore via `onNoteCreated`). Serialização
+  markdown↔blocos em `Editor/blockMarkdown.ts`: um registro de serializadores customizados por
+  tipo de bloco, com fallback para o exportador padrão do BlockNote.
+- **Wikilinks inline** — digitar `[[` abre autocomplete (via `SearchService.Search`); ao
+  selecionar, insere um `wikilink` inline content (`Editor/blocks/wikilinkInlineContent.tsx`)
+  clicável em qualquer lugar do texto, não só numa linha isolada. Serializa para `[[título]]` em
+  disco; ao reabrir, `blockMarkdown.ts` resolve cada ocorrência via `IndexService.ResolveNoteTitle`
+  — se o token ocupava sozinho um parágrafo inteiro (caso do bloco `pageLink`), vira de volta o
+  bloco com cara de card; caso contrário vira o link inline sublinhado. **Só nível de nota** — não
+  há IDs de bloco nem índice de backlinks (a opção "funda" de referência em nível de bloco,
+  escolhida antes para a fatia 5, não foi implementada).
+- `NoteEditor`/`TypedNoteView` — toggle único "Ver Markdown" (não mais dois toggles separados de
+  YAML e de blocos/markdown): alterna entre o editor de blocos (+ formulário de propriedades, no
+  caso de `TypedNoteView`) e o arquivo inteiro cru em CodeMirror. Nota tipada tem título grande
+  editável no topo (`note-page-title`) e lista compacta de propriedades, dentro de uma coluna
+  centralizada (`note-page`, inspirada no layout do Notion).
 - Se `type` não corresponde a nenhum schema existente, botão "Criar tipo agora" com formulário
   pré-preenchido a partir do frontmatter da nota.
 - `SchemaManagerModal`/`SchemaEditorPanel` — CRUD de tipos pela UI ("+ Novo Tipo"), incluindo
   agora um editor de `views[]` (nome/tipo/group_by/columns) por schema.
 - `Views/ViewRenderer` — renderiza uma view salva de um schema como tabela ou kanban, consultando
-  `IndexService.QueryByType`; acessível pelos botões "Ver: <nome>" no `SchemaManagerModal`.
+  `IndexService.QueryByType`; acessível pelos botões "Ver: <nome>" no `SchemaManagerModal`. Ainda
+  não tem um bloco `/` que a embuta dentro do editor (isso é o que falta da fatia 4).
+- **Design visual** — `styles/tokens.css` importa a paleta/tipografia/espaçamento do projeto
+  "Sheepdog Design System" (importado via Claude Design/`DesignSync`, projectId
+  `b7d16433-df8f-40fe-b5d3-250361750b1c`): monocromático, cinza quente, serifado (Playfair
+  Display/Lora, com fallback pra Georgia/Consolas — sem CDN do Google Fonts, pra não quebrar
+  offline-first), raios quase retos, sombras suaves. Camada de layout por cima inspirada no
+  Notion (título grande + coluna centralizada + sidebar sem bordas pesadas), a pedido do usuário
+  depois de achar o resultado do design system puro "cru"/"infantil" — ver commits desta sessão
+  para o histórico das duas iterações. Ícones são SVG outline desenhados à mão
+  (`components/icons/Icons.tsx`), nunca emoji (regra explícita do design system: "No emoji.
+  Ever."). Tema do BlockNote setado como `light`, coerente com o fundo claro.
 
-**Ainda não implementado** (fatias 4-6 da Etapa 1): modo outline/tasks, grafo de
-wikilinks/backlinks, sync git. `RelationField`/`FileField` continuam placeholders de texto —
-um picker real sobre o índice fica para quando essas fatias tocarem relações entre notas.
+**Ainda não implementado**:
+- Blocos de kanban/cronograma embutindo uma `view` salva do schema (resto da fatia 4).
+- Bloco de tarefa inline + `kind: datetime` + índice de tasks vault-wide (resto da fatia 4).
+- Referência/transclusão de bloco (IDs de bloco, índice de backlinks, grafo) — resto da fatia 5,
+  opção "funda" ainda não implementada, só o nível de nota.
+- Sync via git (fatia 6).
+- `RelationField`/`FileField` continuam placeholders de texto — um picker real sobre o índice
+  fica para quando alguma dessas fatias tocar relações entre notas.
 
 Dependências já adicionadas: `goldmark`, `goldmark-meta`, `gopkg.in/yaml.v3`, `modernc.org/sqlite`
-(Go); `@uiw/react-codemirror` + `@codemirror/{state,view,lang-markdown,lang-yaml,commands,theme-one-dark}`
-(frontend). **Ainda não adicionadas** (stack-alvo de fatias futuras, não assumir presentes):
-`fsnotify`, `BlockNote`/`TipTap`.
+(Go); `@uiw/react-codemirror` + `@codemirror/{state,view,lang-markdown,commands,theme-one-dark}`,
+`@blocknote/{core,react,ariakit}` (frontend — `@codemirror/lang-yaml` foi removido junto com o
+YAML-only mode). **Ainda não adicionadas**: `fsnotify`. `tsconfig.json` usa
+`moduleResolution: "Bundler"` (não `"Node"`) — necessário para os subpaths de export do BlockNote
+(`@blocknote/core/extensions`); não reverter sem checar se isso ainda é preciso.
 
 Há suíte de testes Go de verdade (`go test ./...`, cobrindo `internal/vault`, `internal/schema` e
-`internal/index`)
-— a frase antiga "nenhum teste configurado" só vale pro frontend, que segue sem test runner.
+`internal/index`, incluindo `internal/index/search_test.go` que exercita o FTS5 de ponta a
+ponta, não só compila) — a frase antiga "nenhum teste configurado" só vale pro frontend, que
+segue sem test runner.
 
 ## Comandos
 
@@ -341,3 +405,16 @@ Ainda não há test runner nem lint configurados no frontend.
   trade-off aceito, não é bug.
 - `_schemas/` é uma pasta reservada do app (nome em `internal/vault/tree.go`), nunca aparece na
   árvore de cadernos — qualquer nova pasta interna do app deve seguir o mesmo tratamento.
+- BlockNote (não TipTap) para o editor de blocos — decisão fechada, ver tabela de stack técnica.
+- FTS5 e o tokenizer `trigram` estão de fato disponíveis em `modernc.org/sqlite@v1.53.0` sem CGO
+  (confirmado rodando teste real, não só checando símbolos) — não presumir que precisa de scan
+  manual em Go para busca full-text.
+- Design visual: paleta/tipografia vêm do "Sheepdog Design System" (Claude Design, projectId
+  `b7d16433-df8f-40fe-b5d3-250361750b1c`), mas o layout/interação segue inspiração do Notion
+  (título grande, coluna centralizada, sidebar sem bordas pesadas) — não são a mesma coisa, não
+  reverter o layout achando que "foge do design system" importado.
+- Nunca usar emoji na UI do app (regra explícita do design system importado) — ícones são SVG
+  outline hand-authored em `components/icons/Icons.tsx`, sem depender de CDN (offline-first).
+- Wikilinks (`[[título]]`) resolvem em nível de **nota** (por `title` do frontmatter), não em
+  nível de bloco — não presumir que existe transclusão de bloco estilo Logseq só porque
+  `[[...]]` funciona; essa fatia (5) continua parcial.

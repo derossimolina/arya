@@ -100,6 +100,7 @@ function MultiSelectField({ options, value, onChange }: WidgetProps & { options:
             {options.map((opt) => (
                 <label key={opt}>
                     <input type="checkbox" checked={selected.includes(opt)} onChange={() => toggle(opt)} />
+                    <span className="tag-hash">#</span>
                     {opt}
                 </label>
             ))}

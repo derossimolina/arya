@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/derossimolina/arya/internal/index"
 	"github.com/derossimolina/arya/internal/schema"
 	"github.com/derossimolina/arya/internal/vault"
@@ -41,4 +43,39 @@ func (s *IndexService) QueryByType(typeID string) ([]index.ObjectRow, error) {
 	defer idx.Close()
 
 	return idx.QueryByType(typeID)
+}
+
+// ResolveNoteTitle finds the path of the first note whose frontmatter
+// `title` matches the given text (case-insensitive). Returns "" (not an
+// error) when no note matches — used to turn a `[[title]]` wikilink token
+// back into a clickable reference when a note is loaded into the block
+// editor. Notes with a frontmatter parse error are skipped, same as every
+// other vault-wide scan in this package.
+func (s *IndexService) ResolveNoteTitle(title string) (string, error) {
+	root, err := currentVaultRoot()
+	if err != nil {
+		return "", err
+	}
+
+	v := vault.New(root)
+	tree, err := v.Tree()
+	if err != nil {
+		return "", err
+	}
+
+	var found string
+	err = index.WalkNotes(v, tree, func(path string, note vault.Note) error {
+		if found != "" || note.FrontmatterError != "" {
+			return nil
+		}
+		noteTitle, _ := note.Frontmatter["title"].(string)
+		if strings.EqualFold(noteTitle, title) {
+			found = path
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	return found, nil
 }

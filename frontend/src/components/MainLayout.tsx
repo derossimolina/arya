@@ -15,6 +15,8 @@ import NoteEditor from './Editor/NoteEditor';
 import TypedNoteView from './Editor/TypedNoteView';
 import SchemaManagerModal from './Schema/SchemaManagerModal';
 import ViewRenderer from './Views/ViewRenderer';
+import CommandPalette from './Search/CommandPalette';
+import { SidebarCollapseIcon } from './icons/Icons';
 
 interface MainLayoutProps {
     vaultPath: string;
@@ -41,8 +43,21 @@ function MainLayout({ vaultPath, onVaultMissing }: MainLayoutProps) {
     const [activeNote, setActiveNote] = useState<vault.Note | null>(null);
     const [creating, setCreating] = useState<'folder' | 'note' | null>(null);
     const [schemaManagerOpen, setSchemaManagerOpen] = useState(false);
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [activeView, setActiveView] = useState<{ schemaId: string; view: schema.View } | null>(null);
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        function handleGlobalKeyDown(e: KeyboardEvent) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                setSearchOpen(true);
+            }
+        }
+        window.addEventListener('keydown', handleGlobalKeyDown);
+        return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+    }, []);
 
     function openNote(path: string) {
         setActiveView(null);
@@ -160,13 +175,26 @@ function MainLayout({ vaultPath, onVaultMissing }: MainLayoutProps) {
 
     return (
         <div className="main-layout">
-            <aside className="sidebar">
+            <div className="sidebar-rail">
+                <button
+                    className="sidebar-collapse-toggle"
+                    title={sidebarCollapsed ? 'Mostrar sidebar' : 'Esconder sidebar'}
+                    onClick={() => setSidebarCollapsed((v) => !v)}
+                >
+                    <SidebarCollapseIcon />
+                </button>
+            </div>
+            <aside className={sidebarCollapsed ? 'sidebar collapsed' : 'sidebar'}>
                 <div className="sidebar-header" title={vaultPath}>
                     {vaultPath}
                 </div>
+                <button className="sidebar-search-trigger" onClick={() => setSearchOpen(true)}>
+                    <span>Buscar notas…</span>
+                    <span className="sidebar-search-shortcut">Ctrl+K</span>
+                </button>
                 <div className="sidebar-actions">
-                    <button onClick={() => setCreating('folder')}>+ Caderno</button>
-                    <button onClick={() => setCreating('note')}>+ Nota</button>
+                    <button onClick={() => setCreating('folder')}>Caderno</button>
+                    <button onClick={() => setCreating('note')}>Nota</button>
                     <button onClick={() => setSchemaManagerOpen(true)}>Tipos</button>
                 </div>
                 {creating === 'folder' && (
@@ -208,13 +236,16 @@ function MainLayout({ vaultPath, onVaultMissing }: MainLayoutProps) {
                             note={activeNote}
                             onSaveStructured={handleSaveStructured}
                             onSaveRaw={handleSave}
+                            onOpenNote={openNote}
+                            onNoteCreated={reloadTree}
                         />
                     ) : (
                         <NoteEditor
                             key={activeNote.path}
-                            path={activeNote.path}
-                            content={activeNote.rawContent}
+                            note={activeNote}
                             onSave={handleSave}
+                            onOpenNote={openNote}
+                            onNoteCreated={reloadTree}
                         />
                     )
                 ) : (
@@ -230,6 +261,7 @@ function MainLayout({ vaultPath, onVaultMissing }: MainLayoutProps) {
                     }}
                 />
             )}
+            {searchOpen && <CommandPalette onClose={() => setSearchOpen(false)} onOpenNote={openNote} />}
         </div>
     );
 }

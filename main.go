@@ -19,6 +19,7 @@ func main() {
 	notesSvc := NewNotesService()
 	schemaSvc := NewSchemaService()
 	indexSvc := NewIndexService()
+	searchSvc := NewSearchService()
 
 	// Create application with options
 	err := wails.Run(&options.App{
@@ -39,6 +40,7 @@ func main() {
 			notesSvc,
 			schemaSvc,
 			indexSvc,
+			searchSvc,
 		},
 	})
 
